@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # 1. Database: MySQL 8.0
+  mysql-db:
+    image: mysql:8.0
+    container_name: itdesk_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: it_service_desk
+    ports:
+      - "3307:3306"
+    volumes:
+      - itdesk_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. In-Memory Cache & Pub/Sub: Redis
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: itdesk_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - itdesk_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. Event Broker: Apache Kafka in KRaft mode (No Zookeeper required)
+  kafka-broker:
+    image: bashj79/kafka-kraft:latest
+    container_name: itdesk_kafka
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
+  # 4. Mock SMTP: Mailpit (Testing emails locally)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: itdesk_mailpit
+    restart: always
+    ports:
+      - "1025:1025"   # SMTP port jahan Spring Boot mail bhejega
+      - "8025:8025"   # Web UI port jahan hum browser me emails dekh sakenge
+
+volumes:
+  itdesk_mysql_data:
+  itdesk_redis_data:
