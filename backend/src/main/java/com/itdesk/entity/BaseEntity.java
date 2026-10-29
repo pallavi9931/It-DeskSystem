@@ -1,4 +1,4 @@
-package com.itdesk.entity.base;
+package com.itdesk.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
